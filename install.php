@@ -22,6 +22,7 @@ echo "<!DOCTYPE html>
         }
         .success { color: #00e676; }
         .error { color: #ff1744; }
+        .warning { color: #ffd600; }
         pre { background: #020b18; padding: 15px; border-radius: 5px; overflow: auto; }
     </style>
 </head>
@@ -30,19 +31,13 @@ echo "<!DOCTYPE html>
         <h1>🔧 Database Setup</h1>
         <pre>";
 
-// Step 1: Check if we can include db.php
+// Step 1: Load database config
 echo "Step 1: Loading database configuration...\n";
-$db_file = __DIR__ . '/includes/db.php';
-if (file_exists($db_file)) {
-    echo "✓ Found db.php at: $db_file\n";
-    require_once $db_file;
-    echo "✓ db.php loaded successfully\n\n";
-} else {
-    die("✗ Cannot find db.php at: $db_file\n");
-}
+require_once __DIR__ . '/includes/db.php';
+echo "✓ db.php loaded successfully\n\n";
 
-// Step 2: Check environment variables
-echo "Step 2: Checking environment variables...\n";
+// Step 2: Check environment
+echo "Step 2: Checking environment...\n";
 $mysql_host = getenv('MYSQLHOST');
 $mysql_port = getenv('MYSQLPORT');
 $mysql_user = getenv('MYSQLUSER');
@@ -54,7 +49,7 @@ echo "MYSQLPORT: " . ($mysql_port ? "✓ $mysql_port" : "✗ NOT SET") . "\n";
 echo "MYSQLUSER: " . ($mysql_user ? "✓ $mysql_user" : "✗ NOT SET") . "\n";
 echo "MYSQLDATABASE: " . ($mysql_db ? "✓ $mysql_db" : "✗ NOT SET") . "\n\n";
 
-// Step 3: Try to connect
+// Step 3: Connect to database
 echo "Step 3: Connecting to database...\n";
 try {
     $db = Database::getInstance();
@@ -64,75 +59,152 @@ try {
     die("✗ Connection failed: " . $e->getMessage() . "\n");
 }
 
-// Step 4: Find SQL file (any .sql file)
-echo "Step 4: Looking for SQL file...\n";
-$sql_files = glob(__DIR__ . "/*.sql");
-if (empty($sql_files)) {
-    echo "✗ No SQL files found!\n";
-    echo "Files in directory:\n";
-    $files = scandir(__DIR__);
-    foreach ($files as $f) {
-        if (!is_dir($f) && pathinfo($f, PATHINFO_EXTENSION) == 'sql') {
-            echo "  - $f\n";
-        }
-    }
-    die("\n");
-}
+// Step 4: Create tables directly
+echo "Step 4: Creating tables...\n";
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 
-$sql_file = $sql_files[0];
-echo "✓ Found SQL file: " . basename($sql_file) . "\n";
-echo "File size: " . filesize($sql_file) . " bytes\n\n";
-
-// Step 5: Read SQL file
-echo "Step 5: Reading SQL file...\n";
-$sql_content = file_get_contents($sql_file);
-echo "✓ Read " . strlen($sql_content) . " characters\n\n";
-
-// Step 6: Create tables
-echo "Step 6: Creating tables...\n";
-// Split SQL by semicolons
-$statements = explode(";", $sql_content);
-$count = 0;
-$errors = [];
-
-foreach ($statements as $stmt) {
-    $stmt = trim($stmt);
-    if (!empty($stmt) && !preg_match('/^--/', $stmt) && !preg_match('/^\/\*/', $stmt)) {
-        // Skip statements that might cause issues
-        if (strpos($stmt, 'DROP DATABASE') === false && 
-            strpos($stmt, 'CREATE DATABASE') === false &&
-            strpos($stmt, 'USE ') === false &&
-            strpos($stmt, 'SET SQL_MODE') === false &&
-            strpos($stmt, 'SET time_zone') === false &&
-            strpos($stmt, 'START TRANSACTION') === false &&
-            strpos($stmt, 'COMMIT') === false &&
-            strpos($stmt, '/*!') === false) {
-            
-            if ($conn->query($stmt) === TRUE) {
-                $count++;
-                if ($count <= 10) { // Show first 10 only
-                    echo "  ✓ " . substr($stmt, 0, 60) . "...\n";
-                }
-            } else {
-                // Ignore "already exists" errors
-                if (strpos($conn->error, 'already exists') === false) {
-                    $errors[] = $conn->error;
-                    echo "  ⚠ " . $conn->error . "\n";
-                }
-            }
-        }
-    }
-}
-
-echo "\n✓ Executed $count statements\n";
-if (!empty($errors)) {
-    echo "⚠️ " . count($errors) . " warnings (may be normal if tables already exist)\n\n";
+// Create blacklist table
+$sql = "CREATE TABLE IF NOT EXISTS blacklist (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    domain VARCHAR(255) NOT NULL,
+    reason VARCHAR(500) DEFAULT NULL,
+    severity ENUM('medium','high','critical') DEFAULT 'high',
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP(),
+    PRIMARY KEY (id),
+    UNIQUE KEY domain (domain)
+)";
+if ($conn->query($sql)) {
+    echo "✓ blacklist table created\n";
 } else {
-    echo "\n";
+    echo "✗ Error creating blacklist: " . $conn->error . "\n";
 }
 
-// Step 7: Verify tables
-echo "Step 7: Verifying tables...\n";
+// Create phishing_keywords table
+$sql = "CREATE TABLE IF NOT EXISTS phishing_keywords (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    keyword VARCHAR(100) NOT NULL,
+    weight INT(11) DEFAULT 10,
+    category VARCHAR(50) DEFAULT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY keyword (keyword)
+)";
+if ($conn->query($sql)) {
+    echo "✓ phishing_keywords table created\n";
+} else {
+    echo "✗ Error creating phishing_keywords: " . $conn->error . "\n";
+}
+
+// Create url_checks table
+$sql = "CREATE TABLE IF NOT EXISTS url_checks (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    url TEXT NOT NULL,
+    url_hash VARCHAR(64) NOT NULL,
+    domain VARCHAR(255) DEFAULT NULL,
+    protocol VARCHAR(10) DEFAULT NULL,
+    risk_score INT(11) DEFAULT 0,
+    risk_level ENUM('low','medium','high') DEFAULT 'low',
+    flags_triggered JSON DEFAULT NULL,
+    is_https TINYINT(1) DEFAULT 0,
+    url_length INT(11) DEFAULT 0,
+    param_count INT(11) DEFAULT 0,
+    uses_ip TINYINT(1) DEFAULT 0,
+    has_phishing_keywords TINYINT(1) DEFAULT 0,
+    suspicious_domain TINYINT(1) DEFAULT 0,
+    check_count INT(11) DEFAULT 1,
+    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP(),
+    last_checked DATETIME DEFAULT CURRENT_TIMESTAMP(),
+    ip_address VARCHAR(45) DEFAULT NULL,
+    PRIMARY KEY (id),
+    KEY idx_url_hash (url_hash),
+    KEY idx_risk_level (risk_level)
+)";
+if ($conn->query($sql)) {
+    echo "✓ url_checks table created\n";
+} else {
+    echo "✗ Error creating url_checks: " . $conn->error . "\n";
+}
+
+// Create community_reports table
+$sql = "CREATE TABLE IF NOT EXISTS community_reports (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    url_hash VARCHAR(64) NOT NULL,
+    url TEXT NOT NULL,
+    reporter_ip VARCHAR(45) DEFAULT NULL,
+    report_reason VARCHAR(255) DEFAULT NULL,
+    reported_at DATETIME DEFAULT CURRENT_TIMESTAMP(),
+    PRIMARY KEY (id),
+    KEY idx_url_hash (url_hash)
+)";
+if ($conn->query($sql)) {
+    echo "✓ community_reports table created\n";
+} else {
+    echo "✗ Error creating community_reports: " . $conn->error . "\n";
+}
+
+echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+
+// Step 5: Add sample data
+echo "\nStep 5: Adding sample data...\n";
+
+// Check if keywords exist
+$result = $conn->query("SELECT COUNT(*) as count FROM phishing_keywords");
+$row = $result->fetch_assoc();
+if ($row['count'] == 0) {
+    $keywords = [
+        ['login', 8, 'auth'],
+        ['verify', 10, 'auth'],
+        ['update', 7, 'auth'],
+        ['secure', 6, 'security'],
+        ['account', 5, 'auth'],
+        ['password', 10, 'auth'],
+        ['confirm', 8, 'auth'],
+        ['urgent', 8, 'pressure'],
+        ['suspended', 9, 'pressure'],
+        ['paypal', 8, 'brand'],
+        ['amazon', 6, 'brand'],
+        ['netflix', 6, 'brand'],
+        ['apple', 5, 'brand'],
+        ['google', 5, 'brand'],
+        ['bank', 7, 'finance'],
+        ['verify now', 10, 'pressure'],
+        ['sign in', 7, 'auth']
+    ];
+    
+    $stmt = $conn->prepare("INSERT INTO phishing_keywords (keyword, weight, category) VALUES (?, ?, ?)");
+    foreach ($keywords as $kw) {
+        $stmt->bind_param("sis", $kw[0], $kw[1], $kw[2]);
+        $stmt->execute();
+    }
+    echo "✓ Added " . count($keywords) . " phishing keywords\n";
+} else {
+    echo "✓ Phishing keywords already exist (" . $row['count'] . " records)\n";
+}
+
+// Add sample blacklist if empty
+$result = $conn->query("SELECT COUNT(*) as count FROM blacklist");
+$row = $result->fetch_assoc();
+if ($row['count'] == 0) {
+    $blacklist = [
+        ['paypa1.com', 'PayPal phishing clone', 'critical'],
+        ['arnazon.com', 'Amazon phishing clone', 'critical'],
+        ['g00gle.com', 'Google phishing clone', 'critical'],
+        ['secure-login-portal.tk', 'Generic login phishing', 'high']
+    ];
+    
+    $stmt = $conn->prepare("INSERT INTO blacklist (domain, reason, severity) VALUES (?, ?, ?)");
+    foreach ($blacklist as $bl) {
+        $stmt->bind_param("sss", $bl[0], $bl[1], $bl[2]);
+        $stmt->execute();
+    }
+    echo "✓ Added " . count($blacklist) . " blacklist entries\n";
+} else {
+    echo "✓ Blacklist entries already exist (" . $row['count'] . " records)\n";
+}
+
+echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+
+// Step 6: Verify all tables
+echo "\nStep 6: Verifying tables...\n";
 $result = $conn->query("SHOW TABLES");
 $tables = [];
 while ($row = $result->fetch_array()) {
@@ -145,34 +217,18 @@ $missing = array_diff($required, $tables);
 
 if (empty($missing)) {
     echo "\n<span class='success'>✅ DATABASE SETUP COMPLETE!</span>\n";
-    echo "<span class='success'>🎉 Your app is ready to use!</span>\n";
+    echo "<span class='success'>🎉 Your Mamingwit Checker is ready to use!</span>\n";
     
-    // Check if sample data exists
-    $result = $conn->query("SELECT COUNT(*) as count FROM phishing_keywords");
-    if ($result) {
-        $row = $result->fetch_assoc();
-        if ($row['count'] == 0) {
-            echo "\n<span class='info'>📝 Adding sample data...</span>\n";
-            // Add sample keywords
-            $keywords = [
-                ['login', 8, 'auth'], ['verify', 10, 'auth'], ['password', 10, 'auth'],
-                ['secure', 6, 'security'], ['account', 5, 'auth'], ['paypal', 8, 'brand']
-            ];
-            $stmt = $conn->prepare("INSERT IGNORE INTO phishing_keywords (keyword, weight, category) VALUES (?, ?, ?)");
-            foreach ($keywords as $kw) {
-                $stmt->bind_param("sis", $kw[0], $kw[1], $kw[2]);
-                $stmt->execute();
-            }
-            echo "  ✓ Added sample keywords\n";
-        }
-    }
+    // Test API
+    echo "\nTesting API...\n";
+    echo "Visit: <a href='api.php?action=stats'>api.php?action=stats</a>\n";
 } else {
     echo "\n<span class='error'>⚠ Missing tables: " . implode(', ', $missing) . "</span>\n";
 }
 
 echo "</pre>
         <a href='/' style='display:inline-block; background:#00f5ff; color:#020b18; padding:10px 20px; text-decoration:none; margin-top:20px;'>Go to App →</a>
-        <a href='debug.php' style='display:inline-block; background:#00f5ff33; color:#00f5ff; padding:10px 20px; text-decoration:none; margin-top:20px; margin-left:10px;'>Debug →</a>
+        <a href='api.php?action=stats' style='display:inline-block; background:#00f5ff33; color:#00f5ff; padding:10px 20px; text-decoration:none; margin-top:20px; margin-left:10px;'>Test API →</a>
     </div>
 </body>
 </html>";
