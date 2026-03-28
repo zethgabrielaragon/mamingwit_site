@@ -3,25 +3,29 @@
 // MAMINGWIT CHECKER - Database Configuration
 // ============================================================
 
-define('DB_HOST', getenv('DB_HOST') ?: 'db');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: 'root');
-define('DB_NAME', getenv('DB_NAME') ?: 'mamingwit_db');
-define('DB_PORT', getenv('DB_PORT') ?: 3306);
+define('DB_HOST', getenv('MYSQL_HOST') ?: 'localhost');
+define('DB_USER', getenv('MYSQL_USER') ?: 'root');
+define('DB_PASS', getenv('MYSQL_PASSWORD') ?: '');
+define('DB_NAME', getenv('MYSQL_DATABASE') ?: 'mamingwit_db');
+define('DB_PORT', getenv('MYSQL_PORT') ?: 3306);
 
 class Database {
     private static $instance = null;
     private $connection;
+    private $connection_error = false;
 
     private function __construct() {
-        $this->connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        // Create connection with error suppression
+        $this->connection = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        
+        // Check connection
         if ($this->connection->connect_error) {
-            die(json_encode([
-                'error' => true,
-                'message' => 'Database connection failed: ' . $this->connection->connect_error
-            ]));
+            error_log('Database connection failed: ' . $this->connection->connect_error);
+            $this->connection_error = true;
+            // Don't die - let the app show a friendly error
+        } else {
+            $this->connection->set_charset('utf8mb4');
         }
-        $this->connection->set_charset('utf8mb4');
     }
 
     public static function getInstance() {
@@ -34,29 +38,23 @@ class Database {
     public function getConnection() {
         return $this->connection;
     }
+    
+    public function isConnected() {
+        return !$this->connection_error && $this->connection && !$this->connection->connect_error;
+    }
 
     public function query($sql) {
-        $result = $this->connection->query($sql);
-        if ($this->connection->error) {
-            error_log('DB Error: ' . $this->connection->error . ' | SQL: ' . $sql);
+        if (!$this->isConnected()) {
+            return false;
         }
-        return $result;
+        return $this->connection->query($sql);
     }
 
     public function prepare($sql) {
+        if (!$this->isConnected()) {
+            return false;
+        }
         return $this->connection->prepare($sql);
-    }
-
-    public function escape($value) {
-        return $this->connection->real_escape_string($value);
-    }
-
-    public function getLastId() {
-        return $this->connection->insert_id;
-    }
-
-    public function getAffectedRows() {
-        return $this->connection->affected_rows;
     }
 }
 ?>
