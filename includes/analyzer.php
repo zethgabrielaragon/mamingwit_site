@@ -547,14 +547,6 @@ class URLAnalyzer {
     }
 }
 
-// Community Report Handler
-function submitCommunityReport($url, $reason = '') {
-    $db = Database::getInstance();
-    $hash = hash('sha256', $url);
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-    $url = substr($url, 0, 2000);
-    $reason = substr($reason, 0, 255);
-
     // Prevent duplicate reports from same IP
     $check = $db->prepare("SELECT id FROM community_reports WHERE url_hash = ? AND reporter_ip = ? AND reported_at > NOW() - INTERVAL 24 HOUR");
     if ($check) {
