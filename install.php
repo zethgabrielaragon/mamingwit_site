@@ -64,33 +64,36 @@ try {
     die("✗ Connection failed: " . $e->getMessage() . "\n");
 }
 
-// Step 4: Check if SQL file exists
+// Step 4: Find SQL file (any .sql file)
 echo "Step 4: Looking for SQL file...\n";
-$sql_file = __DIR__ . '/mamingwit_db.sql';
-if (file_exists($sql_file)) {
-    echo "✓ Found SQL file: $sql_file\n";
-    echo "File size: " . filesize($sql_file) . " bytes\n\n";
-} else {
-    echo "✗ SQL file not found at: $sql_file\n";
+$sql_files = glob(__DIR__ . "/*.sql");
+if (empty($sql_files)) {
+    echo "✗ No SQL files found!\n";
     echo "Files in directory:\n";
     $files = scandir(__DIR__);
     foreach ($files as $f) {
-        if (!is_dir($f)) {
+        if (!is_dir($f) && pathinfo($f, PATHINFO_EXTENSION) == 'sql') {
             echo "  - $f\n";
         }
     }
     die("\n");
 }
 
-// Step 5: Read and execute SQL
+$sql_file = $sql_files[0];
+echo "✓ Found SQL file: " . basename($sql_file) . "\n";
+echo "File size: " . filesize($sql_file) . " bytes\n\n";
+
+// Step 5: Read SQL file
 echo "Step 5: Reading SQL file...\n";
 $sql_content = file_get_contents($sql_file);
 echo "✓ Read " . strlen($sql_content) . " characters\n\n";
 
+// Step 6: Create tables
 echo "Step 6: Creating tables...\n";
 // Split SQL by semicolons
 $statements = explode(";", $sql_content);
 $count = 0;
+$errors = [];
 
 foreach ($statements as $stmt) {
     $stmt = trim($stmt);
@@ -102,19 +105,31 @@ foreach ($statements as $stmt) {
             strpos($stmt, 'SET SQL_MODE') === false &&
             strpos($stmt, 'SET time_zone') === false &&
             strpos($stmt, 'START TRANSACTION') === false &&
-            strpos($stmt, 'COMMIT') === false) {
+            strpos($stmt, 'COMMIT') === false &&
+            strpos($stmt, '/*!') === false) {
             
             if ($conn->query($stmt) === TRUE) {
                 $count++;
-                echo "  ✓ Executed: " . substr($stmt, 0, 50) . "...\n";
+                if ($count <= 10) { // Show first 10 only
+                    echo "  ✓ " . substr($stmt, 0, 60) . "...\n";
+                }
             } else {
-                echo "  ⚠ Warning: " . $conn->error . "\n";
+                // Ignore "already exists" errors
+                if (strpos($conn->error, 'already exists') === false) {
+                    $errors[] = $conn->error;
+                    echo "  ⚠ " . $conn->error . "\n";
+                }
             }
         }
     }
 }
 
-echo "\n✓ Executed $count statements\n\n";
+echo "\n✓ Executed $count statements\n";
+if (!empty($errors)) {
+    echo "⚠️ " . count($errors) . " warnings (may be normal if tables already exist)\n\n";
+} else {
+    echo "\n";
+}
 
 // Step 7: Verify tables
 echo "Step 7: Verifying tables...\n";
@@ -125,15 +140,39 @@ while ($row = $result->fetch_array()) {
     echo "  ✓ " . $row[0] . "\n";
 }
 
-if (in_array('url_checks', $tables) && in_array('blacklist', $tables)) {
+$required = ['url_checks', 'blacklist', 'phishing_keywords', 'community_reports'];
+$missing = array_diff($required, $tables);
+
+if (empty($missing)) {
     echo "\n<span class='success'>✅ DATABASE SETUP COMPLETE!</span>\n";
     echo "<span class='success'>🎉 Your app is ready to use!</span>\n";
+    
+    // Check if sample data exists
+    $result = $conn->query("SELECT COUNT(*) as count FROM phishing_keywords");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        if ($row['count'] == 0) {
+            echo "\n<span class='info'>📝 Adding sample data...</span>\n";
+            // Add sample keywords
+            $keywords = [
+                ['login', 8, 'auth'], ['verify', 10, 'auth'], ['password', 10, 'auth'],
+                ['secure', 6, 'security'], ['account', 5, 'auth'], ['paypal', 8, 'brand']
+            ];
+            $stmt = $conn->prepare("INSERT IGNORE INTO phishing_keywords (keyword, weight, category) VALUES (?, ?, ?)");
+            foreach ($keywords as $kw) {
+                $stmt->bind_param("sis", $kw[0], $kw[1], $kw[2]);
+                $stmt->execute();
+            }
+            echo "  ✓ Added sample keywords\n";
+        }
+    }
 } else {
-    echo "\n<span class='error'>⚠ Some tables are missing. Please check errors above.</span>\n";
+    echo "\n<span class='error'>⚠ Missing tables: " . implode(', ', $missing) . "</span>\n";
 }
 
 echo "</pre>
-        <a href='/' class='button' style='display:inline-block; background:#00f5ff; color:#020b18; padding:10px 20px; text-decoration:none; margin-top:20px;'>Go to App →</a>
+        <a href='/' style='display:inline-block; background:#00f5ff; color:#020b18; padding:10px 20px; text-decoration:none; margin-top:20px;'>Go to App →</a>
+        <a href='debug.php' style='display:inline-block; background:#00f5ff33; color:#00f5ff; padding:10px 20px; text-decoration:none; margin-top:20px; margin-left:10px;'>Debug →</a>
     </div>
 </body>
 </html>";
