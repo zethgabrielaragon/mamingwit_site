@@ -1,17 +1,28 @@
 <?php
-require_once __DIR__ . '/includes/db.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 echo "<!DOCTYPE html>
 <html>
 <head>
-    <title>Database Setup</title>
+    <title>Database Setup - Mamingwit Checker</title>
     <style>
-        body { font-family: monospace; background: #0a0e27; color: #00f5ff; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; background: #050f1c; padding: 20px; border-radius: 8px; }
+        body { 
+            font-family: monospace; 
+            background: #0a0e27; 
+            color: #00f5ff; 
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #050f1c;
+            padding: 20px;
+            border-radius: 8px;
+        }
         .success { color: #00e676; }
         .error { color: #ff1744; }
         pre { background: #020b18; padding: 15px; border-radius: 5px; overflow: auto; }
-        .button { display: inline-block; background: #00f5ff; color: #020b18; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -19,52 +30,110 @@ echo "<!DOCTYPE html>
         <h1>🔧 Database Setup</h1>
         <pre>";
 
-echo "📊 Environment Check:\n";
-echo "MYSQLHOST: " . (getenv('MYSQLHOST') ? '✓ ' . getenv('MYSQLHOST') : '✗ NOT SET') . "\n";
-echo "MYSQLPORT: " . (getenv('MYSQLPORT') ? '✓ ' . getenv('MYSQLPORT') : '✗ NOT SET') . "\n";
-echo "MYSQLUSER: " . (getenv('MYSQLUSER') ? '✓ ' . getenv('MYSQLUSER') : '✗ NOT SET') . "\n";
-echo "MYSQLDATABASE: " . (getenv('MYSQLDATABASE') ? '✓ ' . getenv('MYSQLDATABASE') : '✗ NOT SET') . "\n\n";
+// Step 1: Check if we can include db.php
+echo "Step 1: Loading database configuration...\n";
+$db_file = __DIR__ . '/includes/db.php';
+if (file_exists($db_file)) {
+    echo "✓ Found db.php at: $db_file\n";
+    require_once $db_file;
+    echo "✓ db.php loaded successfully\n\n";
+} else {
+    die("✗ Cannot find db.php at: $db_file\n");
+}
 
+// Step 2: Check environment variables
+echo "Step 2: Checking environment variables...\n";
+$mysql_host = getenv('MYSQLHOST');
+$mysql_port = getenv('MYSQLPORT');
+$mysql_user = getenv('MYSQLUSER');
+$mysql_pass = getenv('MYSQLPASSWORD');
+$mysql_db = getenv('MYSQLDATABASE');
+
+echo "MYSQLHOST: " . ($mysql_host ? "✓ $mysql_host" : "✗ NOT SET") . "\n";
+echo "MYSQLPORT: " . ($mysql_port ? "✓ $mysql_port" : "✗ NOT SET") . "\n";
+echo "MYSQLUSER: " . ($mysql_user ? "✓ $mysql_user" : "✗ NOT SET") . "\n";
+echo "MYSQLDATABASE: " . ($mysql_db ? "✓ $mysql_db" : "✗ NOT SET") . "\n\n";
+
+// Step 3: Try to connect
+echo "Step 3: Connecting to database...\n";
 try {
     $db = Database::getInstance();
     $conn = $db->getConnection();
-    echo "<span class='success'>✓ Connected to database successfully!</span>\n\n";
-    
-    // Read and execute SQL
-    $sql = file_get_contents(__DIR__ . '/mamingwit_db.sql');
-    $statements = explode(";\n", $sql);
-    $count = 0;
-    
-    foreach ($statements as $statement) {
-        $statement = trim($statement);
-        if (!empty($statement) && !preg_match('/^--/', $statement)) {
-            if (strpos($statement, 'DROP DATABASE') === false && 
-                strpos($statement, 'CREATE DATABASE') === false &&
-                strpos($statement, 'USE ') === false) {
-                if ($conn->query($statement) === TRUE) {
-                    $count++;
-                }
+    echo "✓ Connected successfully!\n\n";
+} catch (Exception $e) {
+    die("✗ Connection failed: " . $e->getMessage() . "\n");
+}
+
+// Step 4: Check if SQL file exists
+echo "Step 4: Looking for SQL file...\n";
+$sql_file = __DIR__ . '/mamingwit_db.sql';
+if (file_exists($sql_file)) {
+    echo "✓ Found SQL file: $sql_file\n";
+    echo "File size: " . filesize($sql_file) . " bytes\n\n";
+} else {
+    echo "✗ SQL file not found at: $sql_file\n";
+    echo "Files in directory:\n";
+    $files = scandir(__DIR__);
+    foreach ($files as $f) {
+        if (!is_dir($f)) {
+            echo "  - $f\n";
+        }
+    }
+    die("\n");
+}
+
+// Step 5: Read and execute SQL
+echo "Step 5: Reading SQL file...\n";
+$sql_content = file_get_contents($sql_file);
+echo "✓ Read " . strlen($sql_content) . " characters\n\n";
+
+echo "Step 6: Creating tables...\n";
+// Split SQL by semicolons
+$statements = explode(";", $sql_content);
+$count = 0;
+
+foreach ($statements as $stmt) {
+    $stmt = trim($stmt);
+    if (!empty($stmt) && !preg_match('/^--/', $stmt) && !preg_match('/^\/\*/', $stmt)) {
+        // Skip statements that might cause issues
+        if (strpos($stmt, 'DROP DATABASE') === false && 
+            strpos($stmt, 'CREATE DATABASE') === false &&
+            strpos($stmt, 'USE ') === false &&
+            strpos($stmt, 'SET SQL_MODE') === false &&
+            strpos($stmt, 'SET time_zone') === false &&
+            strpos($stmt, 'START TRANSACTION') === false &&
+            strpos($stmt, 'COMMIT') === false) {
+            
+            if ($conn->query($stmt) === TRUE) {
+                $count++;
+                echo "  ✓ Executed: " . substr($stmt, 0, 50) . "...\n";
+            } else {
+                echo "  ⚠ Warning: " . $conn->error . "\n";
             }
         }
     }
-    
-    echo "<span class='success'>✅ Database tables created! ($count statements)</span>\n\n";
-    
-    // Verify tables
-    $result = $conn->query("SHOW TABLES");
-    echo "📋 Tables created:\n";
-    while ($row = $result->fetch_array()) {
-        echo "  ✓ " . $row[0] . "\n";
-    }
-    
-    echo "\n<span class='success'>🎉 Setup complete! Your app is ready.</span>\n";
-    
-} catch (Exception $e) {
-    echo "<span class='error'>❌ Error: " . $e->getMessage() . "</span>\n";
+}
+
+echo "\n✓ Executed $count statements\n\n";
+
+// Step 7: Verify tables
+echo "Step 7: Verifying tables...\n";
+$result = $conn->query("SHOW TABLES");
+$tables = [];
+while ($row = $result->fetch_array()) {
+    $tables[] = $row[0];
+    echo "  ✓ " . $row[0] . "\n";
+}
+
+if (in_array('url_checks', $tables) && in_array('blacklist', $tables)) {
+    echo "\n<span class='success'>✅ DATABASE SETUP COMPLETE!</span>\n";
+    echo "<span class='success'>🎉 Your app is ready to use!</span>\n";
+} else {
+    echo "\n<span class='error'>⚠ Some tables are missing. Please check errors above.</span>\n";
 }
 
 echo "</pre>
-        <a href='/' class='button'>Go to App →</a>
+        <a href='/' class='button' style='display:inline-block; background:#00f5ff; color:#020b18; padding:10px 20px; text-decoration:none; margin-top:20px;'>Go to App →</a>
     </div>
 </body>
 </html>";
