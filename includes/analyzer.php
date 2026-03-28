@@ -156,7 +156,7 @@ class URLAnalyzer {
         $result['technical_breakdown'][] = [
             'rule' => 'URL Length Check',
             'status' => $status,
-            'detail' => "URL length: {$len} characters" . ($len > 75 ? ' (suspicious threshold: >75)' : ' (normal range)'),
+            'detail' => "URL length: {$len} characters",
             'score_impact' => "+{$penalty}"
         ];
     }
@@ -545,68 +545,5 @@ class URLAnalyzer {
             }
         }
     }
-}
-
-    // Prevent duplicate reports from same IP
-    $check = $db->prepare("SELECT id FROM community_reports WHERE url_hash = ? AND reporter_ip = ? AND reported_at > NOW() - INTERVAL 24 HOUR");
-    if ($check) {
-        $check->bind_param('ss', $hash, $ip);
-        $check->execute();
-        $result = $check->get_result();
-        if ($result->num_rows > 0) {
-            return ['success' => false, 'message' => 'You have already reported this URL in the last 24 hours.'];
-        }
-        $check->close();
-    }
-
-    $stmt = $db->prepare("INSERT INTO community_reports (url_hash, url, reporter_ip, report_reason) VALUES (?, ?, ?, ?)");
-    if ($stmt) {
-        $stmt->bind_param('ssss', $hash, $url, $ip, $reason);
-        $stmt->execute();
-        $stmt->close();
-        return ['success' => true, 'message' => 'Report submitted. Thank you for helping the community.'];
-    }
-    return ['success' => false, 'message' => 'Failed to submit report.'];
-}
-
-// Get URL history
-function getURLHistory($limit = 20) {
-    $db = Database::getInstance();
-    $result = $db->query("
-        SELECT uc.url, uc.domain, uc.risk_level, uc.risk_score, uc.check_count, uc.last_checked,
-               COUNT(cr.id) as report_count
-        FROM url_checks uc
-        LEFT JOIN community_reports cr ON uc.url_hash = cr.url_hash
-        GROUP BY uc.id
-        ORDER BY uc.last_checked DESC
-        LIMIT " . (int)$limit
-    );
-    $rows = [];
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $rows[] = $row;
-        }
-    }
-    return $rows;
-}
-
-// Get stats
-function getDashboardStats() {
-    $db = Database::getInstance();
-    $stats = [];
-
-    $r = $db->query("SELECT COUNT(*) as total FROM url_checks");
-    $stats['total_checked'] = $r ? $r->fetch_assoc()['total'] : 0;
-
-    $r = $db->query("SELECT COUNT(*) as total FROM url_checks WHERE risk_level = 'high'");
-    $stats['high_risk'] = $r ? $r->fetch_assoc()['total'] : 0;
-
-    $r = $db->query("SELECT COUNT(*) as total FROM community_reports");
-    $stats['total_reports'] = $r ? $r->fetch_assoc()['total'] : 0;
-
-    $r = $db->query("SELECT COUNT(*) as total FROM url_checks WHERE check_count > 1");
-    $stats['repeated_urls'] = $r ? $r->fetch_assoc()['total'] : 0;
-
-    return $stats;
 }
 ?>
