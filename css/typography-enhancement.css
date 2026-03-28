@@ -1,0 +1,420 @@
+/* ============================================================
+   TYPOGRAPHY ENHANCEMENT - SAFE ADDITION
+   Add this AFTER your existing style.css or in a separate file
+   ============================================================ */
+
+/* IMPORTANT: This file is ADDITIVE ONLY - it won't break existing styles */
+
+/* === ENHANCED TYPOGRAPHY VARIABLES === */
+:root {
+  /* Fluid Typography - Only adds NEW variables, doesn't override colors/spacing */
+  --fs-fluid-xs: clamp(0.6875rem, 0.625rem + 0.2083vw, 0.8125rem);      /* 11px → 13px */
+  --fs-fluid-sm: clamp(0.8125rem, 0.75rem + 0.2083vw, 0.9375rem);       /* 13px → 15px */
+  --fs-fluid-base: clamp(0.9375rem, 0.8542rem + 0.2778vw, 1.125rem);    /* 15px → 18px */
+  --fs-fluid-lg: clamp(1.0625rem, 0.9375rem + 0.4167vw, 1.3125rem);     /* 17px → 21px */
+  --fs-fluid-xl: clamp(1.25rem, 1.0625rem + 0.625vw, 1.625rem);         /* 20px → 26px */
+  --fs-fluid-2xl: clamp(1.5rem, 1.25rem + 0.8333vw, 2rem);              /* 24px → 32px */
+  
+  /* Monospace Fluid Sizes */
+  --fs-mono-xs: clamp(0.625rem, 0.5625rem + 0.2083vw, 0.75rem);         /* 10px → 12px */
+  --fs-mono-sm: clamp(0.6875rem, 0.625rem + 0.2083vw, 0.8125rem);       /* 11px → 13px */
+  --fs-mono-md: clamp(0.8125rem, 0.75rem + 0.2083vw, 0.9375rem);        /* 13px → 15px */
+  
+  /* Line Height System */
+  --lh-tight: 1.2;
+  --lh-snug: 1.375;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.625;
+  
+  /* Letter Spacing */
+  --ls-tight: -0.015em;
+  --ls-normal: 0;
+  --ls-wide: 0.05em;
+  --ls-wider: 0.1em;
+  --ls-widest: 0.15em;
+  --ls-ultra: 0.2em;
+}
+
+/* === SAFE TYPOGRAPHY IMPROVEMENTS === */
+/* These use higher specificity to gently enhance without breaking */
+
+/* Improve base readability */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Logo - Enhance clarity */
+.logo-name {
+  font-size: var(--fs-fluid-lg) !important;
+  letter-spacing: var(--ls-widest) !important;
+  line-height: 1 !important;
+}
+
+.logo-sub {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-ultra) !important;
+}
+
+/* Status Bar - Improve legibility */
+.statusbar-inner .mono {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wide) !important;
+}
+
+/* Navigation - Better hierarchy */
+.nav-btn {
+  font-size: var(--fs-fluid-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 600 !important;
+}
+
+/* Stats - More readable numbers */
+.stat-num {
+  font-size: clamp(1.375rem, 1.125rem + 0.8333vw, 1.875rem) !important; /* 22px → 30px */
+  letter-spacing: var(--ls-tight) !important;
+}
+
+.stat-label {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+/* Section Headers - Better hierarchy */
+.section-tag {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-ultra) !important;
+}
+
+.section-title h2 {
+  font-size: var(--fs-fluid-xl) !important;
+  letter-spacing: var(--ls-wider) !important;
+  line-height: var(--lh-tight) !important;
+}
+
+.section-title p {
+  font-size: var(--fs-fluid-sm) !important;
+  line-height: var(--lh-normal) !important;
+}
+
+/* URL Input - Better readability */
+.url-field {
+  font-size: var(--fs-mono-md) !important;
+  letter-spacing: var(--ls-tight) !important;
+  line-height: var(--lh-normal) !important;
+}
+
+/* Scan Button */
+.scan-btn-text {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-widest) !important;
+  font-weight: 700 !important;
+}
+
+/* Example Tags */
+.example-label {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+.example-tag {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wide) !important;
+}
+
+/* Loading States */
+.loading-main {
+  font-size: var(--fs-fluid-base) !important;
+  letter-spacing: var(--ls-widest) !important;
+}
+
+.loading-sub {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+/* Risk Meter */
+.card-label {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-ultra) !important;
+}
+
+.risk-number {
+  font-size: clamp(2rem, 1.75rem + 0.8333vw, 2.5rem) !important; /* 32px → 40px */
+  letter-spacing: var(--ls-tight) !important;
+}
+
+.risk-label-text {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-widest) !important;
+}
+
+.risk-level-text {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-ultra) !important;
+  font-weight: 700 !important;
+}
+
+.meter-legend {
+  font-size: var(--fs-mono-xs) !important;
+}
+
+/* Metadata */
+.meta-key {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-widest) !important;
+}
+
+.meta-val {
+  font-size: var(--fs-mono-md) !important;
+  letter-spacing: var(--ls-tight) !important;
+  line-height: var(--lh-snug) !important;
+}
+
+.url-val {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+/* Indicators */
+.indicator {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+/* Community Section */
+.community-count {
+  font-size: var(--fs-fluid-sm) !important;
+}
+
+.community-count strong {
+  font-size: var(--fs-fluid-base) !important;
+}
+
+.report-btn {
+  font-size: var(--fs-fluid-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 600 !important;
+}
+
+/* Section Headers Small */
+.sh-label {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-ultra) !important;
+}
+
+.sh-count {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-wide) !important;
+}
+
+/* Flags */
+.flag-code {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-widest) !important;
+}
+
+.flag-desc {
+  font-size: var(--fs-fluid-sm) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+.flag-weight {
+  font-size: var(--fs-mono-xs) !important;
+}
+
+.flag-empty {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+/* Tables */
+.breakdown-table th,
+.history-table th {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-widest) !important;
+  font-weight: 600 !important;
+}
+
+.breakdown-table td,
+.history-table td {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-tight) !important;
+  line-height: var(--lh-normal) !important;
+}
+
+.status-badge,
+.risk-badge-sm {
+  font-size: var(--fs-mono-xs) !important;
+  font-weight: 700 !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+.url-cell {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+.domain-cell {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+.rescan-btn {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-wide) !important;
+}
+
+/* Keywords */
+.keyword-chip {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+.kw-word {
+  font-weight: 700 !important;
+}
+
+.kw-cat,
+.kw-weight {
+  font-size: var(--fs-mono-xs) !important;
+}
+
+/* Comparison */
+.comp-header {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 700 !important;
+}
+
+.comp-list li {
+  font-size: var(--fs-fluid-sm) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+.comp-example code {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-tight) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+/* Intel Panel */
+.intel-icon {
+  font-size: clamp(1.5rem, 1.375rem + 0.4167vw, 1.75rem) !important; /* 24px → 28px */
+}
+
+.intel-title {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 700 !important;
+}
+
+.intel-body {
+  font-size: var(--fs-fluid-sm) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+.score-row {
+  font-size: var(--fs-mono-sm) !important;
+}
+
+.score-val {
+  font-weight: 700 !important;
+}
+
+/* Modal */
+.modal-title {
+  font-size: var(--fs-fluid-sm) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 700 !important;
+}
+
+.modal-body p {
+  font-size: var(--fs-fluid-sm) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+.report-url-display {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-tight) !important;
+  line-height: var(--lh-relaxed) !important;
+}
+
+.modal-label {
+  font-size: var(--fs-mono-xs) !important;
+  letter-spacing: var(--ls-widest) !important;
+}
+
+.modal-select {
+  font-size: var(--fs-fluid-sm) !important;
+}
+
+.modal-btn {
+  font-size: var(--fs-fluid-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 700 !important;
+}
+
+/* Toast */
+.toast {
+  font-size: var(--fs-fluid-sm) !important;
+}
+
+/* Refresh Button */
+.refresh-btn {
+  font-size: var(--fs-fluid-xs) !important;
+  letter-spacing: var(--ls-wider) !important;
+  font-weight: 600 !important;
+}
+
+.badge-text {
+  font-size: var(--fs-mono-sm) !important;
+  letter-spacing: var(--ls-wider) !important;
+}
+
+/* === MOBILE OPTIMIZATIONS === */
+@media (max-width: 768px) {
+  .logo-name {
+    font-size: clamp(1rem, 0.875rem + 0.4167vw, 1.25rem) !important; /* 16px → 20px */
+  }
+  
+  .section-title h2 {
+    font-size: clamp(1rem, 0.9375rem + 0.2083vw, 1.125rem) !important; /* 16px → 18px */
+  }
+  
+  .risk-number {
+    font-size: clamp(1.75rem, 1.5rem + 0.8333vw, 2rem) !important; /* 28px → 32px */
+  }
+  
+  .breakdown-table td,
+  .history-table td {
+    font-size: clamp(0.625rem, 0.5938rem + 0.1042vw, 0.6875rem) !important; /* 10px → 11px */
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-num {
+    font-size: clamp(1.25rem, 1.125rem + 0.4167vw, 1.5rem) !important; /* 20px → 24px */
+  }
+  
+  .meta-val {
+    font-size: var(--fs-mono-sm) !important;
+  }
+  
+  .flag-desc {
+    font-size: clamp(0.75rem, 0.7188rem + 0.1042vw, 0.8125rem) !important; /* 12px → 13px */
+  }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .meta-val,
+  .url-val,
+  .breakdown-table td {
+    letter-spacing: var(--ls-normal) !important;
+  }
+}
